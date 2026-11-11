@@ -68,12 +68,14 @@ test("375px layout fits, expands on desktop, and page changes scroll to results"
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
   await expect
     .poll(
-      async () =>
-        (await page
+      async () => {
+        const y = (await page
           .getByRole("heading", { name: "Products", exact: true })
-          .boundingBox())!.y,
+          .boundingBox())!.y;
+        return y >= 0 && y < 100;
+      },
     )
-    .toBeLessThan(100);
+    .toBe(true);
   await page.setViewportSize({ width: 1280, height: 800 });
   const desktopFirst = await page.getByRole("article").nth(0).boundingBox();
   const desktopSecond = await page.getByRole("article").nth(1).boundingBox();

@@ -17,6 +17,13 @@ npx playwright test
 
 Browser tests use installed Google Chrome. For deployment, serve `dist/` with an SPA fallback to `index.html`.
 
+For an optional live DummyJSON check, keep `npm run dev` running in one terminal
+and run `node scripts/verify-live.mjs` in another. It checks 36 real product views,
+description matching, the search/category API limitation, empty results, and
+keyboard pagination. It writes screenshots and response IDs/totals under
+`test-results/live-verification/`. This check needs internet access and is separate
+from the deterministic test suite; catalog or service changes can make it fail.
+
 ## Choices
 
 - The URL owns `q` (product search), `category` (API category slug), `page` (one-based), `sortBy` (`title`, `price`, `rating`) and `order` (`asc`, `desc`). Omitted values default to page 1, title ascending. Invalid values and out-of-range pages use history replace; user actions push history.
