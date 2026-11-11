@@ -1,3 +1,5 @@
+export const RESULTS_PAGE_SIZE = 12;
+
 export type Product = {
   id: number;
   title: string;
@@ -19,8 +21,8 @@ export async function getProducts(
   signal: AbortSignal,
 ): Promise<ProductPage> {
   const params = new URLSearchParams({
-    limit: "12",
-    skip: String((page - 1) * 12),
+    limit: String(RESULTS_PAGE_SIZE),
+    skip: String((page - 1) * RESULTS_PAGE_SIZE),
     sortBy,
     order,
   });

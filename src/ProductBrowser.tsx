@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearchParams } from "react-router";
-import { getProducts } from "./products";
+import { getProducts, RESULTS_PAGE_SIZE } from "./products";
 import { readProductView, sorts } from "./product-view";
 import { Button } from "./components/ui/button";
 
@@ -37,7 +37,7 @@ export function ProductBrowser() {
     query.isFetching ||
     query.fetchStatus === "paused" ||
     query.isPlaceholderData;
-  const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / 12));
+  const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / RESULTS_PAGE_SIZE));
   const correction = corrected.toString();
   useEffect(() => {
     if (correction !== params.toString())
