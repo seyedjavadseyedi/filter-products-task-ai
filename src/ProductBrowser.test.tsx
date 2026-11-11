@@ -8,7 +8,7 @@ import { ProductBrowser } from "./ProductBrowser";
 afterEach(() => vi.unstubAllGlobals());
 test("debounces search into the URL while results and pagination follow the applied view", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply("Description match")));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?page=2&sortBy=price&order=desc");
   await screen.findByText("Description match");
   vi.useFakeTimers();
@@ -53,7 +53,7 @@ test("renders product information in API order and requests the default product 
       }),
     ),
   );
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   mount();
   expect(
     await screen.findByRole("heading", { name: "Zebra lamp" }),
@@ -124,7 +124,7 @@ test.each([
   "applies %s from the URL and resets page when sorting",
   async (value, field, order) => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-    stubProducts("fetch", fetch);
+    stubProducts(fetch);
     const router = mount("/?page=2&sortBy=rating&order=desc");
     await screen.findByText("Page 2 of 3");
     expect(screen.getByRole("combobox", { name: "Sort products" })).toHaveValue(
@@ -141,7 +141,6 @@ test.each([
 test("navigates pages, preserves cards while loading, and disables boundaries", async () => {
   let finish!: (response: Response) => void;
   stubProducts(
-    "fetch",
     vi
       .fn()
       .mockResolvedValueOnce(reply("First", 13))
@@ -173,7 +172,7 @@ test.each(["0", "-1", "1.5", "abc", "9007199254740992"])(
   "replaces invalid page %s and invalid sorting",
   async (page) => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-    stubProducts("fetch", fetch);
+    stubProducts(fetch);
     const router = mount(`/?page=${page}&sortBy=unknown&order=wrong`);
     await screen.findByText("Page 1 of 3");
     expect(router.state.historyAction).toBe("REPLACE");
@@ -185,7 +184,7 @@ test.each(["0", "-1", "1.5", "abc", "9007199254740992"])(
 );
 test("replaces an out-of-range page and fetches the last page", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?page=99");
   await waitFor(() => expect(router.state.location.search).toBe("?page=3"));
   expect(router.state.historyAction).toBe("REPLACE");
@@ -206,7 +205,7 @@ test("shows initial loading and empty results, correcting zero results to page o
     .mockImplementation(() =>
       Promise.resolve(new Response(JSON.stringify({ products: [], total: 0 }))),
     );
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?page=8");
   expect(screen.getByText(/Loading products/)).toBeVisible();
   finish(new Response(JSON.stringify({ products: [], total: 0 })));
@@ -221,7 +220,7 @@ test("hides stale cards after a failed page request and retries the preserved vi
     .mockResolvedValueOnce(reply("Old"))
     .mockResolvedValueOnce(new Response("", { status: 500 }))
     .mockResolvedValueOnce(reply("Recovered"));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount();
   await screen.findByText("Old");
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -234,7 +233,6 @@ test("hides stale cards after a failed page request and retries the preserved vi
 });
 test("reports browser offline state and updates on reconnection", async () => {
   stubProducts(
-    "fetch",
     vi.fn().mockImplementation(() => Promise.resolve(reply())),
   );
   const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
@@ -251,7 +249,6 @@ test("reports browser offline state and updates on reconnection", async () => {
 test("superseded responses cannot overwrite the latest sort and history restores the view", async () => {
   let finish!: (response: Response) => void;
   stubProducts(
-    "fetch",
     vi
       .fn()
       .mockImplementationOnce(
@@ -283,7 +280,6 @@ test("superseded responses cannot overwrite the latest sort and history restores
 test("keeps offline pagination pending until the requested page succeeds", async () => {
   const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
   stubProducts(
-    "fetch",
     vi.fn().mockImplementation(() => Promise.resolve(reply("First", 36))),
   );
   const router = mount();
@@ -310,7 +306,7 @@ test("keeps offline pagination pending until the requested page succeeds", async
 
 test("shared search requests API matches, paginates, and clears while preserving sort", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply("Description-only match")));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=HEADPHONES&page=2&sortBy=rating&order=desc");
   await screen.findByText("Description-only match");
   expect(screen.getByRole("searchbox")).toHaveValue("HEADPHONES");
@@ -326,7 +322,7 @@ test("shared search requests API matches, paginates, and clears while preserving
 
 test("sorting commits pending text once and history navigation cancels edits in both directions", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=old&page=2");
   await screen.findByText("Lamp");
   vi.useFakeTimers();
@@ -360,7 +356,7 @@ test("superseded searches cannot overwrite current results or retain old cards d
     .mockResolvedValueOnce(reply("Original"))
     .mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }))
     .mockResolvedValueOnce(reply("Latest"));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=original");
   await screen.findByText("Original");
   await act(async () => { await router.navigate("/?q=slow"); });
@@ -381,7 +377,7 @@ test("search pagination keeps cards while loading and hides them on failure; Ret
     .mockImplementationOnce(() => new Promise<Response>((_, reject) => { fail = reject; }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ products: [], total: 0, skip: 12, limit: 12 })))
     .mockResolvedValueOnce(new Response(JSON.stringify({ products: [], total: 0, skip: 0, limit: 12 })));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=rare&sortBy=price&order=asc");
   await screen.findByText("Search match");
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -403,7 +399,7 @@ test("automatic page correction preserves pending search text until it is applie
   const fetch = vi.fn()
     .mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }))
     .mockImplementation(() => Promise.resolve(reply("Corrected")));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=old&page=99");
   vi.useFakeTimers();
   try {
@@ -441,7 +437,7 @@ test("category selection cancels pending search, resets the page and pushes hist
   } finally { vi.useRealTimers(); }
 });
 
-function stubProducts(_name: string, fetch: typeof globalThis.fetch) {
+function stubProducts(fetch: typeof globalThis.fetch) {
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
     url.endsWith("category-list")
       ? Promise.resolve(new Response(JSON.stringify(["beauty", "home"])))
@@ -451,7 +447,7 @@ function stubProducts(_name: string, fetch: typeof globalThis.fetch) {
 
 test("category URL paginates and sorts through the API, and All categories restores the list", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?category=beauty&page=2&sortBy=rating&order=desc");
   await screen.findByText("Page 2 of 3");
   const category = screen.getByRole("combobox", { name: "Category" });
@@ -473,7 +469,7 @@ test("category URL paginates and sorts through the API, and All categories resto
 
 test.each([false, true])("pending search leaves category atomically, sorting=%s", async (sort) => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?category=beauty&page=2");
   await screen.findByText("Lamp");
   vi.useFakeTimers();
@@ -494,7 +490,7 @@ test.each([false, true])("pending search leaves category atomically, sorting=%s"
 
 test("search wins over a conflicting URL category without requesting category products", async () => {
   const fetch = vi.fn().mockImplementation(() => Promise.resolve(reply()));
-  stubProducts("fetch", fetch);
+  stubProducts(fetch);
   const router = mount("/?q=lamp&category=beauty&page=2");
   await screen.findByText("Lamp");
   expect(router.state.location.search).toBe("?q=lamp&page=2");

@@ -59,3 +59,39 @@ automatic page correction must preserve pending search input. Back/Forward still
 restore input from the URL and cancel pending edits.
 
 Live DummyJSON verification remains in ticket #6; these checks use mocked HTTP.
+
+# Ticket #4 verification
+
+Verified on 2026-11-11 against Browse categories and coordinate them with search.
+
+- `npm test`: 32 complete-screen tests passed.
+- `npm run typecheck`: passed, including after review cleanup.
+- `npm run build`: passed.
+- `npx playwright test`: 4 Chrome tests passed.
+- `git diff --check`: passed.
+
+Screen coverage adds API category routes and pagination/sorting parameters,
+category selection clearing pending/applied search, cancellation of debounce,
+All categories, history, atomic search/sort transitions, conflicting search/category
+URLs, successful unknown-category correction, and independent category-list
+failure/retry while preserving category URLs and usable search/sorting.
+Product requests wait for canonical URL corrections before fetching.
+
+Browser coverage adds category deep links, refresh, Back/Forward, pagination,
+keyboard focus, and control bounds at 375px without horizontal overflow.
+These are automated browser layout checks. Live API and manual usability
+verification remain in ticket #6.
+
+## Standards
+
+Independent review against starting commit `f1974d5`: no documented violations.
+Two optional heuristics: repeated search/category URL-update logic and an unused
+test-helper argument. Removed the unused argument and reran all 32 screen tests;
+kept the small explicit URL transitions in their callers.
+
+## Spec
+
+Independent review against issue #4 and the product specification: no findings.
+
+Review totals: Standards 0 hard violations, 1 remaining optional duplication
+suggestion; Spec 0 findings.
