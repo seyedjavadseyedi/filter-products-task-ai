@@ -120,6 +120,8 @@ try {
   await page.goto("http://127.0.0.1:5173/");
   await expect(page.getByRole("article")).toHaveCount(12);
   await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("img").evaluateAll((images) =>
+    Promise.all(images.slice(0, 3).map((image) => image.decode())));
   await page.screenshot({ path: `${output}/desktop.png` });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 1280);
   evidence.screenshots = ["mobile.png", "keyboard-focus.png", "mobile-page-2.png", "desktop.png"];
