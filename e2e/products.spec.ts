@@ -82,3 +82,35 @@ test("375px layout fits, expands on desktop, and page changes scroll to results"
     1280,
   );
 });
+
+
+test("shared search survives refresh and history restores search controls and results", async ({ page }) => {
+  await page.route("https://dummyjson.com/products/search?*", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    return route.fulfill({ json: {
+      products: [{ id: 1, title: `Match for ${params.get("q")}`, category: "home", price: 25, rating: 4.2, thumbnail: "https://example.com/lamp.jpg" }],
+      total: 36, skip: Number(params.get("skip")), limit: 12,
+    } });
+  });
+  await page.goto("/?q=lamp&page=2&sortBy=price&order=desc");
+  const input = page.getByRole("searchbox", { name: "Search products" });
+  await expect(input).toHaveValue("lamp");
+  await expect(page.getByRole("heading", { name: "Match for lamp" })).toBeVisible();
+  await expect(page.getByText("Page 2 of 3")).toBeVisible();
+  await page.reload();
+  await expect(input).toHaveValue("lamp");
+  await expect(page.getByRole("heading", { name: "Match for lamp" })).toBeVisible();
+  await page.getByRole("combobox").selectOption("rating-asc");
+  await expect(page.getByText("Page 1 of 3")).toBeVisible();
+  await input.fill("headphones");
+  await expect(page.getByRole("heading", { name: "Match for headphones" })).toBeVisible();
+  await page.goBack();
+  await expect(input).toHaveValue("lamp");
+  await expect(page.getByRole("combobox")).toHaveValue("price-desc");
+  await expect(page.getByText("Page 2 of 3")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Match for lamp" })).toBeVisible();
+  await page.goForward();
+  await expect(input).toHaveValue("headphones");
+  await expect(page.getByRole("combobox")).toHaveValue("rating-asc");
+  await expect(page.getByRole("heading", { name: "Match for headphones" })).toBeVisible();
+});

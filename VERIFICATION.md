@@ -33,3 +33,29 @@ pagination documentation linked in README were checked during completion.
 
 Live DummyJSON and manual usability verification remain in ticket #6. Search,
 categories, and their browser navigation scenarios remain in tickets #3–#5.
+
+
+# Ticket #3 verification
+
+Verified on 2026-11-11 against Search products with debounced URL updates.
+
+- `npm test`: 25 complete-screen tests passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- `npx playwright test`: 3 Chrome tests passed.
+
+Search tests exercise the 300ms debounce, URL replacement, API request contract,
+API-provided matches, clearing, sort preservation, pagination, atomic sorting
+with pending text, Back/Forward cancellation, stale responses, loading, errors,
+Retry, and empty results. Browser coverage adds search deep links, refresh, and
+history restoration. HTTP fixtures return predetermined responses and do not
+implement the backend search algorithm.
+
+Independent reviews compared the changes against starting commit `29faed1`.
+Standards: no documented violations; two optional suggestions (small duplicated
+URL update logic and grouping product-view request arguments). Kept the current
+small implementation. Spec: one bug found and fixed with a regression test:
+automatic page correction must preserve pending search input. Back/Forward still
+restore input from the URL and cancel pending edits.
+
+Live DummyJSON verification remains in ticket #6; these checks use mocked HTTP.

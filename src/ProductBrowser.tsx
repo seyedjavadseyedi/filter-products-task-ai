@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useSearchParams } from "react-router";
+import { useLocation, useNavigationType, useSearchParams } from "react-router";
 import { getProducts, RESULTS_PAGE_SIZE } from "./products";
 import { readProductView, sorts } from "./product-view";
 import { Button } from "./components/ui/button";
@@ -16,18 +16,32 @@ const subscribeOnline = (update: () => void) => {
 export function ProductBrowser() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const { page, sortBy, order, corrected } = readProductView(params);
+  const navigationType = useNavigationType();
+  const { page, sortBy, order, search, corrected } = readProductView(params);
+  const [draft, setDraft] = useState({ key: location.key, text: search, search });
+  // Corrections may retain text; Back/Forward always restore the navigated URL.
+  const input = draft.key === location.key ||
+    (navigationType === "REPLACE" && draft.search === search)
+    ? draft.text
+    : search;
+  if (draft.key !== location.key) {
+    setDraft({ key: location.key, text: input, search });
+  }
+  const searchPending = input !== search;
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine);
   const heading = useRef<HTMLHeadingElement>(null);
   const scrollTarget = useRef<string | null>(null);
   const query = useQuery({
-    queryKey: ["products", { page, sortBy, order }],
-    queryFn: ({ signal }) => getProducts(page, sortBy, order, signal),
+    queryKey: ["products", { page, sortBy, order, search }],
+    queryFn: ({ signal }) => getProducts(page, sortBy, order, signal, search),
     retry: false,
     placeholderData: (previous, previousQuery) => {
       const previousView = previousQuery?.queryKey[1] as
-        { sortBy: string; order: string } | undefined;
-      return previousView?.sortBy === sortBy && previousView.order === order
+        { sortBy: string; order: string; search: string } | undefined;
+      return previousView?.sortBy === sortBy &&
+        previousView.order === order &&
+        previousView.search === search
         ? previous
         : undefined;
     },
@@ -39,6 +53,18 @@ export function ProductBrowser() {
     query.isPlaceholderData;
   const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / RESULTS_PAGE_SIZE));
   const correction = corrected.toString();
+  useEffect(() => {
+    if (!searchPending) return;
+    searchTimer.current = setTimeout(() => {
+      const next = new URLSearchParams(params);
+      if (input) next.set("q", input);
+      else next.delete("q");
+      next.set("page", "1");
+      scrollTarget.current = null;
+      setParams(next, { replace: true });
+    }, 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [input, searchPending, location.key, params, setParams]);
   useEffect(() => {
     if (correction !== params.toString())
       setParams(correction, { replace: true });
@@ -88,6 +114,17 @@ export function ProductBrowser() {
           Products
         </h2>
         <label className="flex max-w-full flex-col gap-2 text-sm font-medium">
+          Search products
+          <input
+            type="search"
+            className="min-w-0 max-w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+            value={input}
+            onChange={(event) =>
+              setDraft({ key: location.key, text: event.target.value, search })
+            }
+          />
+        </label>
+        <label className="flex max-w-full flex-col gap-2 text-sm font-medium">
           Sort products
           <select
             className="max-w-full rounded-md border border-slate-300 bg-white px-3 py-2"
@@ -95,6 +132,9 @@ export function ProductBrowser() {
             onChange={(event) => {
               const [field, direction] = event.target.value.split("-");
               const next = new URLSearchParams(params);
+              clearTimeout(searchTimer.current);
+              if (input) next.set("q", input);
+              else next.delete("q");
               next.set("sortBy", field);
               next.set("order", direction);
               next.set("page", "1");
@@ -173,7 +213,7 @@ export function ProductBrowser() {
               className="mt-8 flex flex-wrap items-center justify-center gap-4"
             >
               <Button
-                disabled={page <= 1 || loading}
+                disabled={page <= 1 || loading || searchPending}
                 onClick={() => changePage(page - 1)}
               >
                 Previous
@@ -182,7 +222,7 @@ export function ProductBrowser() {
                 Page {page} of {pages}
               </p>
               <Button
-                disabled={page >= pages || loading}
+                disabled={page >= pages || loading || searchPending}
                 onClick={() => changePage(page + 1)}
               >
                 Next

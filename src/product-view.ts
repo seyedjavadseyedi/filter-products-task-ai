@@ -21,5 +21,5 @@ export function readProductView(params: URLSearchParams) {
     corrected.set("sortBy", "title");
     corrected.set("order", "asc");
   }
-  return { page, sortBy, order, corrected };
+  return { page, sortBy, order, search: params.get("q") ?? "", corrected };
 }

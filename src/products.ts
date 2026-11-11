@@ -19,6 +19,7 @@ export async function getProducts(
   sortBy: string,
   order: string,
   signal: AbortSignal,
+  search: string,
 ): Promise<ProductPage> {
   const params = new URLSearchParams({
     limit: String(RESULTS_PAGE_SIZE),
@@ -26,7 +27,9 @@ export async function getProducts(
     sortBy,
     order,
   });
-  const response = await fetch(`https://dummyjson.com/products?${params}`, {
+  if (search) params.set("q", search);
+  const path = search ? "products/search" : "products";
+  const response = await fetch(`https://dummyjson.com/${path}?${params}`, {
     signal,
   });
   if (!response.ok) throw new Error("Products unavailable");
