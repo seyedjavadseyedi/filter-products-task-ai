@@ -25,9 +25,17 @@ test("keyboard users can choose a category, sort, paginate and search", async ({
   await page.keyboard.press("Tab");
   await expect(page).toHaveURL(/category=home/);
   await expect(page.getByRole("combobox", { name: "Sort products" })).toBeFocused();
+  const sorted = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/products/category/home" &&
+      url.searchParams.get("sortBy") === "rating" && url.searchParams.get("order") === "desc";
+  });
   await page.keyboard.press("End");
-  await page.keyboard.press("Tab");
+  await (await sorted).finished();
   await expect(page).toHaveURL(/sortBy=rating&order=desc/);
+  await expect(page.getByText("Loading products...")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Next" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Page 2 of 2")).toBeVisible();

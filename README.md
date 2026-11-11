@@ -24,6 +24,16 @@ keyboard pagination. It writes screenshots and response IDs/totals under
 `test-results/live-verification/`. This check needs internet access and is separate
 from the deterministic test suite; catalog or service changes can make it fail.
 
+## Continuous integration
+
+[CI](.github/workflows/ci.yml) runs on every push and pull request with Node 24
+on Ubuntu. It installs locked dependencies with `npm ci`, then runs typechecking,
+screen tests, the production build, and browser tests. Playwright installs Google
+Chrome and its system dependencies to match the browser configuration and starts
+Vite automatically. Browser failures upload the HTML report, traces, and test
+screenshots as `playwright-failure-evidence`, retained for seven days.
+Live DummyJSON verification stays an optional local command.
+
 ## Choices
 
 - The URL owns `q` (product search), `category` (API category slug), `page` (one-based), `sortBy` (`title`, `price`, `rating`) and `order` (`asc`, `desc`). Omitted values default to page 1, title ascending. Invalid values and out-of-range pages use history replace; user actions push history.

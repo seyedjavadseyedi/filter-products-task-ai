@@ -223,3 +223,35 @@ Independent reviewers compared the work with starting commit `7837e44`.
 Standards: no documented violations or optional smell suggestions. Spec: no
 actionable findings; the reviewers accepted the disclosed screenshot inspection
 and keyboard automation method. Totals: **Standards 0; Spec 0**.
+
+# Continuous integration verification
+
+Implemented on 2026-11-11 from the retrospective's highest-priority finding:
+run typechecking, screen tests, Playwright tests, and a production build on every
+push and pull request. Live DummyJSON verification remains an optional local check.
+
+The workflow uses Ubuntu and Node 24, installs locked dependencies with `npm ci`,
+and explicitly installs Google Chrome plus system dependencies to match the
+existing Playwright configuration. Browser failures retain an HTML report,
+traces, and screenshots for seven days. The token has read-only contents access.
+
+Validation on the local Windows machine:
+
+- Official `actionlint` **1.7.12**: `.github/workflows/ci.yml` passed.
+- Clean `npm ci` in an isolated temporary directory: passed (123 packages added,
+  zero audit vulnerabilities); the running development server was left intact.
+- `npm run typecheck`: passed.
+- `npm test`: **32 screen tests passed**.
+- `npm run build`: passed.
+- Focused keyboard browser scenario repeated ten times with three workers:
+  **10 passed** after fixing synchronization in the test.
+- `npx playwright test --reporter=line,html --trace=retain-on-failure`:
+  **14 browser tests passed** (full suite).
+- `git diff --check`: passed.
+
+The initial browser run exposed a test race: Tab could skip Next while sorting
+temporarily disabled pagination. The test now waits for the sorted response and
+completed rendering before checking keyboard focus. No production behavior changed.
+
+This validates syntax and local commands; it does not claim a successful
+GitHub-hosted Ubuntu run. That run becomes available after the workflow is pushed.
