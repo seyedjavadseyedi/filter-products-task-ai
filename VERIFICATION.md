@@ -95,3 +95,38 @@ Independent review against issue #4 and the product specification: no findings.
 
 Review totals: Standards 0 hard violations, 1 remaining optional duplication
 suggestion; Spec 0 findings.
+
+# Ticket #5 verification
+
+Verified on 2026-11-11 against **Verify shared URLs and browser navigation**.
+
+Reproduce from the repository root with dependencies and Google Chrome installed:
+
+- `npx playwright test e2e/navigation.spec.ts`: 6 focused navigation tests passed.
+- `npx playwright test`: all 10 browser tests passed; Playwright starts Vite automatically.
+- `npm test -- src/ProductBrowser.test.tsx`: 32 screen tests passed.
+- `npm test`: full suite, 32 screen tests passed.
+- `npm run typecheck`: passed, now including browser tests and Playwright configuration.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+
+The new browser suite intercepts every DummyJSON request. Shared search and
+category links assert visible controls, cards, pagination controls, the URL,
+and exact request route/parameters before and after refresh. History scenarios
+cover category, sorting and pagination, two applied search phrases replacing one
+entry, and pending search cancellation on both Back and Forward. A paused browser
+clock advances 1000ms after navigation to ensure discarded text cannot issue a
+request or overwrite the URL, input or cards. Normalization scenarios cover
+search/category conflicts, invalid page/sort values, an unknown category and an
+out-of-range page, then navigate Back/Forward across the corrected entry.
+
+Existing production behavior passed these scenarios; no production fix was
+needed. Initial test-clock failures were corrected in the tests. Live DummyJSON
+and manual usability verification remain in ticket #6.
+
+Independent code review compares against starting commit `8aecdb9`.
+Standards: no documented violations; one optional suggestion to replace the
+small view-assertion helper's positional arguments with a named object.
+Spec: no actionable findings. Review totals: Standards 0 hard violations and
+1 optional readability suggestion; Spec 0 findings. The executed commands and
+results above complete the implementation handoff.
