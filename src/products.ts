@@ -20,6 +20,7 @@ export async function getProducts(
   order: string,
   signal: AbortSignal,
   search: string,
+  category: string,
 ): Promise<ProductPage> {
   const params = new URLSearchParams({
     limit: String(RESULTS_PAGE_SIZE),
@@ -28,10 +29,17 @@ export async function getProducts(
     order,
   });
   if (search) params.set("q", search);
-  const path = search ? "products/search" : "products";
+  const path = search ? "products/search" : category
+    ? `products/category/${encodeURIComponent(category)}` : "products";
   const response = await fetch(`https://dummyjson.com/${path}?${params}`, {
     signal,
   });
   if (!response.ok) throw new Error("Products unavailable");
+  return response.json();
+}
+
+export async function getCategories(signal: AbortSignal): Promise<string[]> {
+  const response = await fetch("https://dummyjson.com/products/category-list", { signal });
+  if (!response.ok) throw new Error("Categories unavailable");
   return response.json();
 }

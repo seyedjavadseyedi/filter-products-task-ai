@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigationType, useSearchParams } from "react-router";
-import { getProducts, RESULTS_PAGE_SIZE } from "./products";
+import { getCategories, getProducts, RESULTS_PAGE_SIZE } from "./products";
 import { readProductView, sorts } from "./product-view";
 import { Button } from "./components/ui/button";
 
@@ -17,7 +17,14 @@ export function ProductBrowser() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const navigationType = useNavigationType();
-  const { page, sortBy, order, search, corrected } = readProductView(params);
+  const categories = useQuery({
+    queryKey: ["categories"],
+    queryFn: ({ signal }) => getCategories(signal),
+    retry: false,
+  });
+  const { page, sortBy, order, search, category, corrected } = readProductView(
+    params, categories.isSuccess ? categories.data : undefined,
+  );
   const [draft, setDraft] = useState({ key: location.key, text: search, search });
   // Corrections may retain text; Back/Forward always restore the navigated URL.
   const input = draft.key === location.key ||
@@ -33,15 +40,17 @@ export function ProductBrowser() {
   const heading = useRef<HTMLHeadingElement>(null);
   const scrollTarget = useRef<string | null>(null);
   const query = useQuery({
-    queryKey: ["products", { page, sortBy, order, search }],
-    queryFn: ({ signal }) => getProducts(page, sortBy, order, signal, search),
+    queryKey: ["products", { page, sortBy, order, search, category }],
+    queryFn: ({ signal }) => getProducts(page, sortBy, order, signal, search, category),
+    enabled: corrected.toString() === params.toString(),
     retry: false,
     placeholderData: (previous, previousQuery) => {
       const previousView = previousQuery?.queryKey[1] as
-        { sortBy: string; order: string; search: string } | undefined;
+        { sortBy: string; order: string; search: string; category: string } | undefined;
       return previousView?.sortBy === sortBy &&
         previousView.order === order &&
         previousView.search === search
+        && previousView.category === category
         ? previous
         : undefined;
     },
@@ -59,6 +68,7 @@ export function ProductBrowser() {
       const next = new URLSearchParams(params);
       if (input) next.set("q", input);
       else next.delete("q");
+      if (input) next.delete("category");
       next.set("page", "1");
       scrollTarget.current = null;
       setParams(next, { replace: true });
@@ -124,6 +134,39 @@ export function ProductBrowser() {
             }
           />
         </label>
+        <div className="flex max-w-full flex-col gap-2">
+          <label className="flex max-w-full flex-col gap-2 text-sm font-medium">
+            Category
+            <select
+              className="max-w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+              value={category}
+              disabled={!categories.isSuccess}
+              onChange={(event) => {
+                clearTimeout(searchTimer.current);
+                const next = new URLSearchParams(params);
+                next.delete("q");
+                if (event.target.value) next.set("category", event.target.value);
+                else next.delete("category");
+                next.set("page", "1");
+                setDraft({ key: location.key, text: "", search });
+                scrollTarget.current = null;
+                setParams(next);
+              }}
+            >
+              <option value="">All categories</option>
+              {category && !categories.data?.includes(category) && (
+                <option value={category}>{category}</option>
+              )}
+              {categories.data?.map((slug) => <option key={slug} value={slug}>{slug}</option>)}
+            </select>
+          </label>
+          {categories.isError && (
+            <div role="status">
+              <p>Categories unavailable</p>
+              <Button onClick={() => categories.refetch()}>Retry</Button>
+            </div>
+          )}
+        </div>
         <label className="flex max-w-full flex-col gap-2 text-sm font-medium">
           Sort products
           <select
@@ -135,6 +178,7 @@ export function ProductBrowser() {
               clearTimeout(searchTimer.current);
               if (input) next.set("q", input);
               else next.delete("q");
+              if (input) next.delete("category");
               next.set("sortBy", field);
               next.set("order", direction);
               next.set("page", "1");

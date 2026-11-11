@@ -1,6 +1,6 @@
 # Product Browser
 
-A small React learning app for browsing DummyJSON products with search, sorting, and pagination (issues #2 and #3).
+A small React learning app for browsing DummyJSON products with search, categories, sorting, and pagination (issues #2–#4).
 
 ## Run
 
@@ -19,9 +19,9 @@ Browser tests use installed Google Chrome. For deployment, serve `dist/` with an
 
 ## Choices
 
-- The URL owns `q` (product search), `page` (one-based), `sortBy` (`title`, `price`, `rating`) and `order` (`asc`, `desc`). Omitted values default to page 1, title ascending. Invalid values and out-of-range pages use history replace; user actions push history.
+- The URL owns `q` (product search), `category` (API category slug), `page` (one-based), `sortBy` (`title`, `price`, `rating`) and `order` (`asc`, `desc`). Omitted values default to page 1, title ascending. Invalid values and out-of-range pages use history replace; user actions push history.
 - `product-view.ts` parses URL values; `products.ts` is the typed HTTP boundary. The screen composes them directly with TanStack Query. Products retain API order.
-- Every request value belongs to the query key. Fetch consumes Query's abort signal. Previous data is retained only when search and sorting stay the same; errors hide stale cards. Retry uses the current view.
+- Every request value belongs to the query key. Fetch consumes Query's abort signal. Previous data is retained only when search, category, and sorting stay the same; errors hide stale cards. Retry uses the current view.
 - Tailwind provides the responsive layout; a local shadcn/ui Button adapted from the official new-york registry provides pagination and Retry controls. A native labelled select keeps six sorting choices easy to use.
 - Screen tests use real router/query providers and mock only HTTP fetch. Browser tests verify deep links, refresh, history, layout and scrolling.
 
@@ -31,4 +31,4 @@ Setup checked against [React TypeScript](https://react.dev/learn/typescript), [V
 
 Search input waits 300ms before replacing the URL and resetting page 1. Results follow the applied URL while text is pending, and pagination is disabled. Sorting commits pending text and sort together with history push. Navigation cancels pending text and timers. Empty search uses the unsearched endpoint; API matches retain their returned order.
 
-Category selection belongs to a later issue slice.
+Categories load independently. Selecting a category clears search and pending input, resets page 1, and pushes history. Nonempty search clears category; conflicting URLs favor search. Unknown categories are removed only after successful category-list loading. Category-list failure disables its control with Retry while preserving the URL category and leaving product browsing usable.

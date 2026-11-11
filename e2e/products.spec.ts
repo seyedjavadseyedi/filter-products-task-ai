@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
+  await page.route("https://dummyjson.com/products/category-list", (route) => route.fulfill({ json: ["beauty", "home"] }));
   await page.route("https://dummyjson.com/products?*", (route) => {
     const params = new URL(route.request().url()).searchParams;
     const skip = Number(params.get("skip"));
@@ -28,7 +29,7 @@ test("shared URLs, refresh, Back and Forward restore sorting and results", async
 }) => {
   await page.goto("/?page=2&sortBy=price&order=desc");
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
-  await expect(page.getByRole("combobox")).toHaveValue("price-desc");
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("price-desc");
   await expect(
     page.getByRole("heading", { name: "price desc product 12", exact: true }),
   ).toBeVisible();
@@ -36,13 +37,13 @@ test("shared URLs, refresh, Back and Forward restore sorting and results", async
   await expect(
     page.getByRole("heading", { name: "price desc product 12", exact: true }),
   ).toBeVisible();
-  await page.getByRole("combobox").selectOption("rating-asc");
+  await page.getByRole("combobox", { name: "Sort products" }).selectOption("rating-asc");
   await expect(page.getByText("Page 1 of 3")).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole("combobox")).toHaveValue("price-desc");
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("price-desc");
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
   await page.goForward();
-  await expect(page.getByRole("combobox")).toHaveValue("rating-asc");
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("rating-asc");
   await expect(
     page.getByRole("heading", { name: "rating asc product 0", exact: true }),
   ).toBeVisible();
@@ -61,8 +62,8 @@ test("375px layout fits, expands on desktop, and page changes scroll to results"
   const second = await page.getByRole("article").nth(1).boundingBox();
   expect(first!.x).toBe(second!.x);
   expect(second!.y).toBeGreaterThan(first!.y);
-  await page.getByRole("combobox").focus();
-  await expect(page.getByRole("combobox")).toBeFocused();
+  await page.getByRole("combobox", { name: "Sort products" }).focus();
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toBeFocused();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
   await expect
@@ -100,17 +101,55 @@ test("shared search survives refresh and history restores search controls and re
   await page.reload();
   await expect(input).toHaveValue("lamp");
   await expect(page.getByRole("heading", { name: "Match for lamp" })).toBeVisible();
-  await page.getByRole("combobox").selectOption("rating-asc");
+  await page.getByRole("combobox", { name: "Sort products" }).selectOption("rating-asc");
   await expect(page.getByText("Page 1 of 3")).toBeVisible();
   await input.fill("headphones");
   await expect(page.getByRole("heading", { name: "Match for headphones" })).toBeVisible();
   await page.goBack();
   await expect(input).toHaveValue("lamp");
-  await expect(page.getByRole("combobox")).toHaveValue("price-desc");
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("price-desc");
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Match for lamp" })).toBeVisible();
   await page.goForward();
   await expect(input).toHaveValue("headphones");
-  await expect(page.getByRole("combobox")).toHaveValue("rating-asc");
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("rating-asc");
   await expect(page.getByRole("heading", { name: "Match for headphones" })).toBeVisible();
+});
+
+
+test("category shared URL, refresh and history restore controls at 375px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.route("https://dummyjson.com/products/category/*?*", (route) => {
+    const url = new URL(route.request().url());
+    return route.fulfill({ json: {
+      products: [{ id: 1, title: `${url.pathname.split("/").pop()} product`, category: "beauty", price: 25, rating: 4, thumbnail: "https://example.com/product.jpg" }],
+      total: 36, skip: Number(url.searchParams.get("skip")), limit: 12,
+    } });
+  });
+  await page.goto("/?category=beauty&page=2&sortBy=price&order=desc");
+  const category = page.getByRole("combobox", { name: "Category" });
+  await expect(category).toHaveValue("beauty");
+  await expect(page.getByRole("heading", { name: "beauty product" })).toBeVisible();
+  await expect(page.getByText("Page 2 of 3")).toBeVisible();
+  await page.reload();
+  await expect(category).toHaveValue("beauty");
+  await expect(page.getByText("Page 2 of 3")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+  for (const control of [category, page.getByRole("searchbox"), page.getByRole("combobox", { name: "Sort products" })]) {
+    const box = await control.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+    await control.focus();
+    await expect(control).toBeFocused();
+  }
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("Page 3 of 3")).toBeVisible();
+  await category.selectOption("");
+  await expect(page.getByText("Page 1 of 3")).toBeVisible();
+  await page.goBack();
+  await expect(category).toHaveValue("beauty");
+  await expect(page.getByText("Page 3 of 3")).toBeVisible();
+  await page.goForward();
+  await expect(category).toHaveValue("");
+  await expect(page.getByText("Page 1 of 3")).toBeVisible();
 });

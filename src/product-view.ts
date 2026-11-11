@@ -6,7 +6,7 @@ export const sorts = [
   ["rating-asc", "Rating low to high"],
   ["rating-desc", "Rating high to low"],
 ] as const;
-export function readProductView(params: URLSearchParams) {
+export function readProductView(params: URLSearchParams, categories?: string[]) {
   const raw = params.get("page");
   const page =
     raw && /^[1-9]\d*$/.test(raw) && Number.isSafeInteger(Number(raw))
@@ -21,5 +21,9 @@ export function readProductView(params: URLSearchParams) {
     corrected.set("sortBy", "title");
     corrected.set("order", "asc");
   }
-  return { page, sortBy, order, search: params.get("q") ?? "", corrected };
+  const search = params.get("q") ?? "";
+  const rawCategory = params.get("category") ?? "";
+  const category = !search && (!categories || categories.includes(rawCategory)) ? rawCategory : "";
+  if (rawCategory && !category) corrected.delete("category");
+  return { page, sortBy, order, search, category, corrected };
 }
