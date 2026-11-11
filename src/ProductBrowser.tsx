@@ -32,6 +32,11 @@ export function ProductBrowser() {
         : undefined;
     },
   });
+  const loading =
+    query.isPending ||
+    query.isFetching ||
+    query.fetchStatus === "paused" ||
+    query.isPlaceholderData;
   const pages = Math.max(1, Math.ceil((query.data?.total ?? 0) / 12));
   const correction = corrected.toString();
   useEffect(() => {
@@ -54,16 +59,11 @@ export function ProductBrowser() {
   ]);
   useEffect(() => {
     if (scrollTarget.current !== location.search) scrollTarget.current = null;
-    if (
-      scrollTarget.current &&
-      query.isSuccess &&
-      !query.isFetching &&
-      page <= pages
-    ) {
+    if (scrollTarget.current && query.isSuccess && !loading && page <= pages) {
       heading.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       scrollTarget.current = null;
     }
-  }, [location.search, query.isSuccess, query.isFetching, page, pages]);
+  }, [location.search, query.isSuccess, loading, page, pages]);
   function changePage(nextPage: number) {
     const next = new URLSearchParams(params);
     next.set("page", String(nextPage));
@@ -115,7 +115,7 @@ export function ProductBrowser() {
           You appear to be offline.
         </p>
       )}
-      {query.isFetching || query.isPending ? (
+      {loading ? (
         <p role="status" className="mb-5 text-slate-600">
           Loading products...
         </p>
@@ -134,7 +134,7 @@ export function ProductBrowser() {
           )}
           <div
             className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            aria-busy={query.isFetching}
+            aria-busy={loading}
           >
             {query.data?.products.map((product) => (
               <article
@@ -173,7 +173,7 @@ export function ProductBrowser() {
               className="mt-8 flex flex-wrap items-center justify-center gap-4"
             >
               <Button
-                disabled={page <= 1 || query.isFetching}
+                disabled={page <= 1 || loading}
                 onClick={() => changePage(page - 1)}
               >
                 Previous
@@ -182,7 +182,7 @@ export function ProductBrowser() {
                 Page {page} of {pages}
               </p>
               <Button
-                disabled={page >= pages || query.isFetching}
+                disabled={page >= pages || loading}
                 onClick={() => changePage(page + 1)}
               >
                 Next

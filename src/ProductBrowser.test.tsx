@@ -260,3 +260,30 @@ test("superseded responses cannot overwrite the latest sort and history restores
   });
   expect(screen.getByRole("combobox")).toHaveValue("price-desc");
 });
+
+test("keeps offline pagination pending until the requested page succeeds", async () => {
+  const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(() => Promise.resolve(reply("First", 36))),
+  );
+  const router = mount();
+  await screen.findByText("Page 1 of 3");
+  const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  act(() => window.dispatchEvent(new Event("offline")));
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(router.state.location.search).toBe("?page=2");
+  expect(screen.getByText("First")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  expect(screen.getByText(/Loading products/)).toBeVisible();
+  expect(scroll).not.toHaveBeenCalled();
+  online.mockReturnValue(true);
+  act(() => window.dispatchEvent(new Event("online")));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
+  );
+  expect(scroll).toHaveBeenCalledOnce();
+  scroll.mockRestore();
+  online.mockRestore();
+});
